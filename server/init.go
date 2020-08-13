@@ -42,11 +42,34 @@ func (h Application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.FileServer(http.Dir(h.staticPath)).ServeHTTP(w, r)
 }
 
+// serveWs handles websocket requests from peers.
+func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	client := &Connection{hub: hub, socketConnection: conn, send: make(chan []byte, 256)}
+	client.hub.subscribe <- client
+
+	// Allow collection of memory referenced by the caller by doing all work in
+	// new goroutines.
+	go client.writePump()
+	go client.readPump()
+}
+
 // Initialize starts up a http server listerning on given port
 // and creates a router for the index route path
 func Initialize() {
 	router := mux.NewRouter()
-	applicationHandler := Application{staticPath: "frontend/build", indexPath: "index.html"}
+	hub := newHub()
+	go hub.run()
+	// handles web socket connection
+	router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		serveWs(hub, w, r)
+	})
+
+	applicationHandler := Application{staticPath: "build", indexPath: "index.html"}
 	router.PathPrefix("/").Handler(applicationHandler)
 	srv := &http.Server{
 		Handler:      router,
