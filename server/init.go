@@ -77,5 +77,6 @@ func Initialize() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
+	log.Println("Go server running on port 8000...")
 	log.Fatal(srv.ListenAndServe())
 }
