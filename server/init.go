@@ -49,7 +49,7 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	client := &Connection{hub: hub, socketConnection: conn, send: make(chan []byte, 256)}
+	client := &Connection{hub: hub, socketConnection: conn, sink: make(chan []byte, 256)}
 	client.hub.subscribe <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in
@@ -77,5 +77,6 @@ func Initialize() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
+	log.Println("Go server running on port 8000...")
 	log.Fatal(srv.ListenAndServe())
 }
