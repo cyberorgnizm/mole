@@ -3,71 +3,11 @@ package server
 import (
 	"bytes"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
-
-// Hub maintains the set of active clients and broadcasts messages to the
-// clients.
-type Hub struct {
-	// subscribed connections
-	connections map[*Connection]bool
-
-	// Inbound messages from the connections.
-	broadcast chan []byte
-
-	// Subscribe requests from the connections
-	subscribe chan *Connection
-
-	// Unsubscribe requests from the connections
-	unsubscribe chan *Connection
-}
-
-// newHub creates a Hub and returns a pointer to it
-func newHub() *Hub {
-	return &Hub{
-		connections: make(map[*Connection]bool),
-		broadcast:   make(chan []byte),
-		subscribe:   make(chan *Connection),
-		unsubscribe: make(chan *Connection),
-	}
-}
-
-func (h *Hub) run() {
-	for {
-		select {
-		case client := <-h.subscribe:
-			// set incoming client connection
-			h.connections[client] = true
-		case client := <-h.unsubscribe:
-			if _, ok := h.connections[client]; ok {
-				delete(h.connections, client)
-				close(client.send)
-			}
-		case message := <-h.broadcast:
-			for client := range h.connections {
-				select {
-				case client.send <- message:
-				default:
-					close(client.send)
-					delete(h.connections, client)
-				}
-			}
-		}
-	}
-}
-
-// Connection created for each new connection to the hub
-type Connection struct {
-	hub *Hub
-
-	// The websocket connection.
-	socketConnection *websocket.Conn
-
-	// Buffered channel of outbound messages.
-	send chan []byte
-}
 
 const (
 	// Time allowed to write a message to the peer.
@@ -91,6 +31,7 @@ var (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -132,7 +73,7 @@ func (c *Connection) writePump() {
 	}()
 	for {
 		select {
-		case message, ok := <-c.send:
+		case message, ok := <-c.sink:
 			c.socketConnection.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
@@ -147,10 +88,10 @@ func (c *Connection) writePump() {
 			w.Write(message)
 
 			// Add queued chat messages to the current websocket message.
-			n := len(c.send)
+			n := len(c.sink)
 			for i := 0; i < n; i++ {
 				w.Write(newline)
-				w.Write(<-c.send)
+				w.Write(<-c.sink)
 			}
 
 			if err := w.Close(); err != nil {
