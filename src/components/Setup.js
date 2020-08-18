@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect, memo } from "react";
+import React, { useState } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import Layout from "./Layout";
 import Container from "@material-ui/core/Container";
 import { Button, TextField, Grid, Box } from "@material-ui/core";
-// import { useWebSocket, useWebRTC, useBrowserAgent } from "../hooks";
+import { useWebRTC } from "../hooks";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -12,7 +12,7 @@ const useStyles = makeStyles((theme) => ({
   },
   video: {
     width: "100%",
-    height: "650px",
+    height: "600px",
   },
 }));
 
@@ -20,6 +20,7 @@ function Setup() {
   const classes = useStyles();
 
   const [name, setName] = useState("");
+  const streamRef = useWebRTC();
 
   const handleNameChange = (e) => {
     setName(e.target.value);
@@ -34,7 +35,15 @@ function Setup() {
       <main className={classes.root}>
         <Grid container spacing={2} justify="center" alignItems="center">
           <Grid item xs={12}>
-            <video autoPlay playsInline className={classes.video} />
+            <Box mt={2}>
+              <video
+                autoPlay
+                playsInline
+                width="100%"
+                className={classes.video}
+                ref={streamRef}
+              />
+            </Box>
           </Grid>
         </Grid>
         <Box mt={4}>
