@@ -39,7 +39,7 @@ var upgrader = websocket.Upgrader{
 // The application runs readPump in a per-connection goroutine. The application
 // ensures that there is at most one reader on a connection by executing all
 // reads from this goroutine.
-func (c *Connection) readPump() {
+func (c *Peer) readPump() {
 	defer func() {
 		c.hub.unsubscribe <- c
 		c.socketConnection.Close()
@@ -65,7 +65,7 @@ func (c *Connection) readPump() {
 // A goroutine running writePump is started for each connection. The
 // application ensures that there is at most one writer to a connection by
 // executing all writes from this goroutine.
-func (c *Connection) writePump() {
+func (c *Peer) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()

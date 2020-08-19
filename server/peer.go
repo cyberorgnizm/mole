@@ -4,7 +4,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// Connection created for each new connection to the hub
+// Peer created for each new connection to the hub
 type Peer struct {
 	hub *Hub
 
